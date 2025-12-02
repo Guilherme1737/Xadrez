@@ -71,29 +71,44 @@ public class UI {
     
     public static void printBoard(ChessPiece[][] pieces) {
         System.out.println();
+        printHorizontalLine();
         for (int i = 0; i < pieces.length; i++) {
-            System.out.print((8 - i) + " ");
+            System.out.print(ANSI_GREEN + (8 - i) + ANSI_RESET + " ");
             for (int j = 0; j < pieces.length; j++) {
+                System.out.print("| ");
                 printPiece(pieces[i][j], false);
             }
-            System.out.println();
+            System.out.println("|");
+            printHorizontalLine();
         }
-        System.out.println("  a b c d e f g h");
+        System.out.println(ANSI_GREEN + "    a   b   c   d   e   f   g   h" + ANSI_RESET);
         System.out.println();
     }
     
     // Imprime tabuleiro com movimentos possíveis destacados
     public static void printBoard(ChessPiece[][] pieces, boolean[][] possibleMoves) {
         System.out.println();
+        printHorizontalLine();
         for (int i = 0; i < pieces.length; i++) {
-            System.out.print((8 - i) + " ");
+            System.out.print(ANSI_GREEN + (8 - i) + ANSI_RESET + " ");
             for (int j = 0; j < pieces.length; j++) {
+                System.out.print("| ");
                 printPiece(pieces[i][j], possibleMoves[i][j]);
             }
-            System.out.println();
+            System.out.println("|");
+            printHorizontalLine();
         }
-        System.out.println("  a b c d e f g h");
+        System.out.println(ANSI_GREEN + "    a   b   c   d   e   f   g   h" + ANSI_RESET);
         System.out.println();
+    }
+    
+    // Imprime linha horizontal do tabuleiro
+    private static void printHorizontalLine() {
+        System.out.print("  ");
+        for (int i = 0; i < 8; i++) {
+            System.out.print("+---");
+        }
+        System.out.println("+");
     }
     
     private static void printPiece(ChessPiece piece, boolean background) {
@@ -101,7 +116,7 @@ public class UI {
             System.out.print(ANSI_BLUE_BACKGROUND);
         }
         if (piece == null) {
-            System.out.print("-" + ANSI_RESET);
+            System.out.print(" " + ANSI_RESET);
         } else {
             if (piece.getColor() == Color.WHITE) {
                 System.out.print(ANSI_WHITE + piece + ANSI_RESET);
