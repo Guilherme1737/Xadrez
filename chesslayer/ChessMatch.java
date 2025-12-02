@@ -26,6 +26,7 @@ public class ChessMatch {
     
     private List<Piece> piecesOnTheBoard = new ArrayList<>();
     private List<Piece> capturedPieces = new ArrayList<>();
+    private List<String> moveHistory = new ArrayList<>();
     
     public ChessMatch() {
         board = new Board(8, 8);
@@ -58,6 +59,10 @@ public class ChessMatch {
         return promoted;
     }
     
+    public List<String> getMoveHistory() {
+        return moveHistory;
+    }
+    
     // Retorna matriz de peças para a interface
     public ChessPiece[][] getPieces() {
         ChessPiece[][] mat = new ChessPiece[board.getRows()][board.getColumns()];
@@ -81,6 +86,15 @@ public class ChessMatch {
         Position target = targetPosition.toPosition();
         validateSourcePosition(source);
         validateTargetPosition(source, target);
+        
+        // Guarda informações para notação SAN antes do movimento
+        ChessPiece movingPiece = (ChessPiece) board.piece(source);
+        boolean isCapture = board.thereIsAPiece(target) || 
+                           (movingPiece instanceof Pawn && source.getColumn() != target.getColumn());
+        boolean isCastlingShort = movingPiece instanceof King && target.getColumn() == source.getColumn() + 2;
+        boolean isCastlingLong = movingPiece instanceof King && target.getColumn() == source.getColumn() - 2;
+        String disambiguation = getDisambiguation(movingPiece, source, target);
+        
         Piece capturedPiece = makeMove(source, target);
         
         // Verifica se o jogador se colocou em xeque
@@ -93,17 +107,26 @@ public class ChessMatch {
         
         // Promoção
         promoted = null;
+        String promotionPiece = "";
         if (movedPiece instanceof Pawn) {
             if ((movedPiece.getColor() == Color.WHITE && target.getRow() == 0) || 
                 (movedPiece.getColor() == Color.BLACK && target.getRow() == 7)) {
                 promoted = (ChessPiece) board.piece(target);
                 promoted = replacePromotedPiece("Q"); // Promoção padrão para Rainha
+                promotionPiece = "=Q";
             }
         }
         
         check = testCheck(opponent(currentPlayer));
+        boolean isCheckMateMove = testCheckMate(opponent(currentPlayer));
         
-        if (testCheckMate(opponent(currentPlayer))) {
+        // Gera notação SAN
+        String notation = generateSANNotation(movingPiece, sourcePosition, targetPosition, 
+                                              isCapture, isCastlingShort, isCastlingLong, 
+                                              disambiguation, promotionPiece, check, isCheckMateMove);
+        moveHistory.add(notation);
+        
+        if (isCheckMateMove) {
             checkMate = true;
         } else {
             nextTurn();
@@ -117,6 +140,91 @@ public class ChessMatch {
         }
         
         return (ChessPiece) capturedPiece;
+    }
+    
+    // Gera notação algébrica padrão (SAN)
+    private String generateSANNotation(ChessPiece piece, ChessPosition source, ChessPosition target,
+                                       boolean isCapture, boolean isCastlingShort, boolean isCastlingLong,
+                                       String disambiguation, String promotion, boolean isCheck, boolean isCheckMate) {
+        StringBuilder notation = new StringBuilder();
+        
+        // Roque
+        if (isCastlingShort) {
+            notation.append("O-O");
+        } else if (isCastlingLong) {
+            notation.append("O-O-O");
+        } else if (piece instanceof Pawn) {
+            // Peão
+            if (isCapture) {
+                notation.append(source.getColumn()); // coluna de origem
+                notation.append("x");
+            }
+            notation.append(target.getColumn());
+            notation.append(target.getRow());
+            notation.append(promotion);
+        } else {
+            // Outras peças
+            notation.append(piece.toString()); // K, Q, R, B, N
+            notation.append(disambiguation);
+            if (isCapture) {
+                notation.append("x");
+            }
+            notation.append(target.getColumn());
+            notation.append(target.getRow());
+        }
+        
+        // Xeque ou xeque-mate
+        if (isCheckMate) {
+            notation.append("#");
+        } else if (isCheck) {
+            notation.append("+");
+        }
+        
+        return notation.toString();
+    }
+    
+    // Determina se precisa desambiguar o movimento (quando duas peças iguais podem ir para o mesmo destino)
+    private String getDisambiguation(ChessPiece piece, Position source, Position target) {
+        if (piece instanceof Pawn || piece instanceof King) {
+            return "";
+        }
+        
+        List<ChessPiece> samePieces = new ArrayList<>();
+        for (Piece p : piecesOnTheBoard) {
+            ChessPiece cp = (ChessPiece) p;
+            if (cp != piece && cp.getClass() == piece.getClass() && cp.getColor() == piece.getColor()) {
+                boolean[][] moves = cp.possibleMoves();
+                if (moves[target.getRow()][target.getColumn()]) {
+                    samePieces.add(cp);
+                }
+            }
+        }
+        
+        if (samePieces.isEmpty()) {
+            return "";
+        }
+        
+        ChessPosition sourceChess = ChessPosition.fromPosition(source);
+        boolean sameColumn = false;
+        boolean sameRow = false;
+        
+        for (ChessPiece sp : samePieces) {
+            ChessPosition spPos = sp.getChessPosition();
+            if (spPos.getColumn() == sourceChess.getColumn()) {
+                sameColumn = true;
+            }
+            if (spPos.getRow() == sourceChess.getRow()) {
+                sameRow = true;
+            }
+        }
+        
+        if (sameColumn && sameRow) {
+            return "" + sourceChess.getColumn() + sourceChess.getRow();
+        } else if (sameColumn) {
+            return "" + sourceChess.getRow();
+        } else {
+            return "" + sourceChess.getColumn();
+        }
     }
     
     // Substitui peça promovida

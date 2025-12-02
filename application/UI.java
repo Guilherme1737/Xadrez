@@ -55,6 +55,8 @@ public class UI {
     public static void printMatch(ChessMatch chessMatch, List<ChessPiece> captured) {
         printBoard(chessMatch.getPieces());
         System.out.println();
+        printMoveHistory(chessMatch.getMoveHistory());
+        System.out.println();
         printCapturedPieces(captured);
         System.out.println();
         System.out.println("Turno: " + chessMatch.getTurn());
@@ -67,6 +69,21 @@ public class UI {
             System.out.println(ANSI_GREEN + "XEQUE-MATE!" + ANSI_RESET);
             System.out.println("Vencedor: " + chessMatch.getCurrentPlayer());
         }
+    }
+    
+    // Imprime histórico de jogadas em notação SAN
+    private static void printMoveHistory(List<String> moveHistory) {
+        if (moveHistory.isEmpty()) {
+            return;
+        }
+        System.out.print(ANSI_CYAN + "Jogadas: " + ANSI_RESET);
+        for (int i = 0; i < moveHistory.size(); i++) {
+            if (i % 2 == 0) {
+                System.out.print((i / 2 + 1) + ".");
+            }
+            System.out.print(moveHistory.get(i) + " ");
+        }
+        System.out.println();
     }
     
     public static void printBoard(ChessPiece[][] pieces) {
